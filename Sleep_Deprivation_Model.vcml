@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--This biomodel was generated in VCML Version Rel_Version_7.7.0_build_77-->
+<vcml xmlns="http://sourceforge.net/projects/vcell/vcml" Version="Rel_Version_7.7.0_build_77">
+  <BioModel Name="Sleep_Deprivation_Model">
+    <Model Name="model">
+      <Compound Name="s0" />
+      <Compound Name="s1" />
+      <Compound Name="s2" />
+      <Feature Name="c0" KeyValue="313247057" />
+      <LocalizedCompound Name="ATP" CompoundRef="s0" Structure="c0" OverrideName="true" KeyValue="313247059" />
+      <LocalizedCompound Name="ROS" CompoundRef="s1" Structure="c0" OverrideName="true" KeyValue="313247060" />
+      <LocalizedCompound Name="SleepFactor" CompoundRef="s2" Structure="c0" OverrideName="true" KeyValue="313247061" />
+      <SimpleReaction Structure="c0" Name="ATP_Decrease" Reversible="false" FluxOption="MolecularOnly" KeyValue="313247062">
+        <Reactant LocalizedCompoundRef="SleepFactor" Stoichiometry="1" KeyValue="313247063" />
+        <Product LocalizedCompoundRef="ATP" Stoichiometry="1" KeyValue="313247064" />
+        <Kinetics KineticsType="MassAction">
+          <Parameter Name="J" Role="reaction rate" Unit="uM.s-1">((Kf * SleepFactor) - (Kr * ATP))</Parameter>
+          <Parameter Name="Kf" Role="forward rate constant" Unit="s-1">0.5</Parameter>
+          <Parameter Name="Kr" Role="reverse rate constant" Unit="s-1">0.0</Parameter>
+        </Kinetics>
+      </SimpleReaction>
+      <SimpleReaction Structure="c0" Name="ROS_Increase" Reversible="false" FluxOption="MolecularOnly" KeyValue="313247065">
+        <Reactant LocalizedCompoundRef="SleepFactor" Stoichiometry="1" KeyValue="313247066" />
+        <Product LocalizedCompoundRef="ROS" Stoichiometry="1" KeyValue="313247067" />
+        <Kinetics KineticsType="MassAction">
+          <Parameter Name="J" Role="reaction rate" Unit="uM.s-1">((Kf * SleepFactor) - (Kr * ROS))</Parameter>
+          <Parameter Name="Kf" Role="forward rate constant" Unit="s-1">0.3</Parameter>
+          <Parameter Name="Kr" Role="reverse rate constant" Unit="s-1">0.0</Parameter>
+        </Kinetics>
+      </SimpleReaction>
+      <Diagram Name="c0" Structure="c0">
+        <LocalizedCompoundShape NodeReferenceModeAttrTag="full" LocalizedCompoundRef="SleepFactor" LocationX="260" LocationY="126" />
+        <SimpleReactionShape NodeReferenceModeAttrTag="full" SimpleReactionRef="ROS_Increase" LocationX="300" LocationY="146" />
+        <LocalizedCompoundShape NodeReferenceModeAttrTag="full" LocalizedCompoundRef="ROS" LocationX="327" LocationY="153" />
+        <LocalizedCompoundShape NodeReferenceModeAttrTag="full" LocalizedCompoundRef="ATP" LocationX="241" LocationY="131" />
+        <SimpleReactionShape NodeReferenceModeAttrTag="full" SimpleReactionRef="ATP_Decrease" LocationX="259" LocationY="137" />
+      </Diagram>
+      <Version Name="model" KeyValue="313247052" BranchId="313245742" Archived="0" Date="15-May-2026 12:50:37" FromVersionable="false">
+        <Owner Name="vcellaniket123" Identifier="299403632" />
+        <GroupAccess Type="1" />
+      </Version>
+      <ModelUnitSystem VolumeSubstanceUnit="uM.um3" MembraneSubstanceUnit="molecules" LumpedReactionSubstanceUnit="molecules" VolumeUnit="um3" AreaUnit="um2" LengthUnit="um" TimeUnit="s" />
+    </Model>
+    <SimulationSpec Name="Application0" Stochastic="false" UseConcentration="true" SpringSaLaD="false" RuleBased="false" MassConservationModelReduction="false" InsufficientIterations="false" InsufficientMaxMolecules="false">
+      <NetworkConstraints RbmMaxIteration="1" RbmMaxMoleculesPerSpecies="10" RbmSpeciesLimit="800" RbmReactionsLimit="2500" />
+      <Annotation />
+      <Geometry Name="non-spatial2062482936" Dimension="0">
+        <Extent X="10.0" Y="10.0" Z="10.0" />
+        <Origin X="0.0" Y="0.0" Z="0.0" />
+        <SubVolume Name="Compartment" Handle="0" Type="Compartmental" KeyValue="313245737" />
+        <Version Name="non-spatial2062482936" KeyValue="313245733" BranchId="313245734" Archived="0" Date="15-May-2026 12:34:19" FromVersionable="false">
+          <Owner Name="vcellaniket123" Identifier="299403632" />
+          <GroupAccess Type="1" />
+        </Version>
+      </Geometry>
+      <GeometryContext>
+        <FeatureMapping Feature="c0" GeometryClass="Compartment" SubVolume="Compartment" Size="50000.0">
+          <BoundariesTypes Xm="Flux" Xp="Flux" Ym="Flux" Yp="Flux" Zm="Flux" Zp="Flux" />
+        </FeatureMapping>
+      </GeometryContext>
+      <ReactionContext>
+        <LocalizedCompoundSpec LocalizedCompoundRef="ATP" ForceConstant="false" WellMixed="false" ForceContinuous="false">
+          <InitialConcentration>100.0</InitialConcentration>
+          <Diffusion>0.0</Diffusion>
+        </LocalizedCompoundSpec>
+        <LocalizedCompoundSpec LocalizedCompoundRef="ROS" ForceConstant="false" WellMixed="false" ForceContinuous="false">
+          <InitialConcentration>10.0</InitialConcentration>
+          <Diffusion>0.0</Diffusion>
+        </LocalizedCompoundSpec>
+        <LocalizedCompoundSpec LocalizedCompoundRef="SleepFactor" ForceConstant="false" WellMixed="false" ForceContinuous="false">
+          <InitialConcentration>1.0</InitialConcentration>
+          <Diffusion>0.0</Diffusion>
+        </LocalizedCompoundSpec>
+        <ReactionSpec ReactionStepRef="ATP_Decrease" ReactionMapping="included" />
+        <ReactionSpec ReactionStepRef="ROS_Increase" ReactionMapping="included" />
+      </ReactionContext>
+      <MathDescription Name="Application0_generated">
+        <Constant Name="_F_">96485.3321</Constant>
+        <Constant Name="_F_nmol_">9.64853321E-5</Constant>
+        <Constant Name="_K_GHK_">1.0E-9</Constant>
+        <Constant Name="_N_pmol_">6.02214179E11</Constant>
+        <Constant Name="_PI_">3.141592653589793</Constant>
+        <Constant Name="_R_">8314.46261815</Constant>
+        <Constant Name="_T_">300.0</Constant>
+        <Constant Name="ATP_init_uM">100.0</Constant>
+        <Constant Name="K_millivolts_per_volt">1000.0</Constant>
+        <Constant Name="Kf_ATP_Decrease">0.5</Constant>
+        <Constant Name="Kf_ROS_Increase">0.3</Constant>
+        <Constant Name="KMOLE">0.001660538783162726</Constant>
+        <Constant Name="Kr_ATP_Decrease">0.0</Constant>
+        <Constant Name="Kr_ROS_Increase">0.0</Constant>
+        <Constant Name="ROS_init_uM">10.0</Constant>
+        <Constant Name="Size_c0">50000.0</Constant>
+        <Constant Name="SleepFactor_init_uM">1.0</Constant>
+        <VolumeVariable Name="ATP" Domain="Compartment" />
+        <VolumeVariable Name="ROS" Domain="Compartment" />
+        <VolumeVariable Name="SleepFactor" Domain="Compartment" />
+        <Function Name="J_ATP_Decrease" Domain="Compartment">((Kf_ATP_Decrease * SleepFactor) - (Kr_ATP_Decrease * ATP))</Function>
+        <Function Name="J_ROS_Increase" Domain="Compartment">((Kf_ROS_Increase * SleepFactor) - (Kr_ROS_Increase * ROS))</Function>
+        <CompartmentSubDomain Name="Compartment">
+          <BoundaryType Boundary="Xm" Type="Value" />
+          <BoundaryType Boundary="Xp" Type="Value" />
+          <BoundaryType Boundary="Ym" Type="Value" />
+          <BoundaryType Boundary="Yp" Type="Value" />
+          <BoundaryType Boundary="Zm" Type="Value" />
+          <BoundaryType Boundary="Zp" Type="Value" />
+          <OdeEquation Name="ATP" SolutionType="Unknown">
+            <Rate>J_ATP_Decrease</Rate>
+            <Initial>ATP_init_uM</Initial>
+          </OdeEquation>
+          <OdeEquation Name="ROS" SolutionType="Unknown">
+            <Rate>J_ROS_Increase</Rate>
+            <Initial>ROS_init_uM</Initial>
+          </OdeEquation>
+          <OdeEquation Name="SleepFactor" SolutionType="Unknown">
+            <Rate>( - J_ATP_Decrease - J_ROS_Increase)</Rate>
+            <Initial>SleepFactor_init_uM</Initial>
+          </OdeEquation>
+        </CompartmentSubDomain>
+        <Version Name="Application0_generated" KeyValue="313246769" BranchId="313245739" Archived="0" Date="15-May-2026 12:46:58" FromVersionable="false">
+          <Owner Name="vcellaniket123" Identifier="299403632" />
+          <GroupAccess Type="1" />
+        </Version>
+      </MathDescription>
+      <Simulation Name="Simulation0">
+        <SolverTaskDescription TaskType="Unsteady" UseSymbolicJacobian="false" Solver="Combined Stiff Solver (IDA/CVODE)">
+          <TimeBound StartTime="0.0" EndTime="100.0" />
+          <TimeStep DefaultTime="0.1" MinTime="1.0E-8" MaxTime="1.0" />
+          <ErrorTolerance Absolut="1.0E-9" Relative="1.0E-9" />
+          <OutputOptions KeepEvery="1" KeepAtMost="1000" />
+          <NumberProcessors>1</NumberProcessors>
+        </SolverTaskDescription>
+        <MathOverrides />
+        <Version Name="Simulation0" KeyValue="313246779" BranchId="313245769" Archived="0" Date="15-May-2026 12:46:58" FromVersionable="false">
+          <Owner Name="vcellaniket123" Identifier="299403632" />
+          <GroupAccess Type="1" />
+        </Version>
+      </Simulation>
+      <Version Name="Application0" KeyValue="313247069" BranchId="313245760" Archived="0" Date="15-May-2026 12:50:37" FromVersionable="false">
+        <Owner Name="vcellaniket123" Identifier="299403632" />
+        <GroupAccess Type="1" />
+      </Version>
+      <MicroscopeMeasurement Name="fluor">
+        <ConvolutionKernel Type="ProjectionZKernel" />
+      </MicroscopeMeasurement>
+    </SimulationSpec>
+    <Version Name="Sleep_Deprivation_Model" KeyValue="313247077" BranchId="313245772" Archived="0" Date="15-May-2026 12:50:37" FromVersionable="false">
+      <Owner Name="vcellaniket123" Identifier="299403632" />
+      <GroupAccess Type="1" />
+    </Version>
+    <pathwayModel>
+      <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns:bp="http://www.biopax.org/release/biopax-level3.owl#" version="3.0" />
+    </pathwayModel>
+    <relationshipModel>
+      <RMNS version="3.0" />
+    </relationshipModel>
+    <vcmetadata>
+      <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" />
+      <nonrdfAnnotationList />
+      <uriBindingList />
+    </vcmetadata>
+  </BioModel>
+</vcml>

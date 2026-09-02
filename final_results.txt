@@ -1,0 +1,12 @@
+Sleep Deprivation AI Prediction Results
+
+Best Model: Logistic Regression
+Best Accuracy: 1.0
+
+Predicted Brain State: Healthy
+Connectivity Status: Stable Connectivity
+Severity Score: 0.12631578947368421
+Risk Level: Low Risk
+
+Interpretation:
+Normal ATP and ROS levels indicate stable neural communication.
