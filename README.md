@@ -23,10 +23,10 @@ Sleep deprivation affects cellular energy metabolism, oxidative stress, neuronal
 ATP and ROS dynamics per condition, reconstructed from the documented VCell model's exact reaction rate constants (`Kf_ATP_Decrease = 0.5`, `Kf_ROS_Increase = 0.3`) and initial conditions — final values match the originally recorded simulation output.
 
 <p align="center">
-  <img src="assets/graphs/ATP_Healthy.png" width="220"><img src="assets/graphs/ATP_Mild.png" width="220"><img src="assets/graphs/ATP_Recovery.png" width="220"><img src="assets/graphs/ATP_Severe.png" width="220">
+  <img src="assets/ATP_Healthy.png" width="220"><img src="assets/ATP_Mild.png" width="220"><img src="assets/ATP_Recovery.png" width="220"><img src="assets/ATP_Severe.png" width="220">
 </p>
 <p align="center">
-  <img src="assets/graphs/ROS_Healthy.png" width="220"><img src="assets/graphs/ROS_Mild.png" width="220"><img src="assets/graphs/ROS_Recovery.png" width="220"><img src="assets/graphs/ROS_Severe.png" width="220">
+  <img src="assets/ROS_Healthy.png" width="220"><img src="assets/ROS_Mild.png" width="220"><img src="assets/ROS_Recovery.png" width="220"><img src="assets/ROS_Severe.png" width="220">
 </p>
 
 ## 🕸️ Connectivity progression
@@ -34,7 +34,7 @@ ATP and ROS dynamics per condition, reconstructed from the documented VCell mode
 Illustrative reconstruction of the Cytoscape connectome across the four states — network density visibly drops from Healthy through Severe, consistent with the saved Cytoscape session's progression.
 
 <p align="center">
-  <img src="assets/networks/Healthy_Network.png" width="220"><img src="assets/networks/Mild_Network.png" width="220"><img src="assets/networks/Recovery_Network.png" width="220"><img src="assets/networks/Severe_Network.png" width="220">
+  <img src="assets/Healthy_Network.png" width="220"><img src="assets/Mild_Network.png" width="220"><img src="assets/Recovery_Network.png" width="220"><img src="assets/Severe_Network.png" width="220">
 </p>
 
 ## 🧬 How it works
@@ -95,7 +95,10 @@ Worth stating plainly, since parts of the pipeline are easy to overstate:
 │   ├── sound.js
 │   └── dashboard.js
 ├── assets/
-│   └── pipeline_diagram.png
+│   ├── pipeline_diagram.png
+│   ├── ATP_Healthy.png / ATP_Mild.png / ATP_Recovery.png / ATP_Severe.png
+│   ├── ROS_Healthy.png / ROS_Mild.png / ROS_Recovery.png / ROS_Severe.png
+│   └── Healthy_Network.png / Mild_Network.png / Recovery_Network.png / Severe_Network.png
 └── README.md
 ```
 
