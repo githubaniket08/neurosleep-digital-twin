@@ -1,0 +1,853 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeuroSleep Digital Twin Platform</title>
+  
+  <!-- Google Fonts: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;650;750&family=JetBrains+Mono:wght@450;550;750&display=swap" rel="stylesheet">
+  
+  <!-- CSS imports -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Configure Tailwind CSS Theme -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            slate: {
+              850: '#1e293b',
+              950: '#020617',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Cyberpunk/Glassmorphic Style Custom Overrides -->
+  <style>
+    /* Custom Scrollbars */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #020617;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #00f0ff;
+    }
+
+    /* Custom range input styling */
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #00f0ff;
+      box-shadow: 0 0 8px #00f0ff;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 12px;
+      height: 12px;
+      border: 0;
+      border-radius: 50%;
+      background: #00f0ff;
+      box-shadow: 0 0 8px #00f0ff;
+      cursor: pointer;
+    }
+
+    /* Keyframe animation for guided presenter slide progress bar */
+    @keyframes shrinkProgress {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+    .animate-progress-shrink {
+      animation: shrinkProgress 14s linear forwards;
+    }
+  </style>
+
+  <!-- Local Diagnostic Error Handler -->
+  <script>
+    window.addEventListener('error', function(e) {
+      // Ignore harmless ResizeObserver loop limit warnings and extension script errors
+      if (e.message && (
+        e.message.indexOf('ResizeObserver') !== -1 || 
+        e.message.indexOf('Script error') !== -1
+      )) {
+        return;
+      }
+      const rootEl = document.getElementById('root');
+      if (rootEl) {
+        rootEl.innerHTML = `
+          <div class="flex flex-col items-center justify-center min-h-screen p-6 text-center font-mono max-w-2xl mx-auto bg-[#0a0f1d] text-slate-100">
+            <div class="w-14 h-14 rounded-lg bg-red-950/20 border border-red-500 flex items-center justify-center text-red-500 text-2xl font-bold animate-pulse mb-6">⚠️</div>
+            <div class="text-red-500 font-bold text-sm tracking-widest uppercase mb-2">SYSTEM INITIALIZATION FAILURE</div>
+            <div class="text-xs text-slate-400 border border-red-900/50 bg-red-950/20 p-4 rounded text-left w-full overflow-auto max-h-60 leading-normal select-text mb-4">
+              <strong>Error:</strong> ${e.message}
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed mb-6">
+              Please run through a local server (VS Code Live Server) or ensure you are connected to the internet to download scripts.
+            </p>
+          </div>
+        `;
+      }
+    });
+  </script>
+
+  <!-- 3rd Party UMD CDNs (React, Babel, Three.js, Cytoscape) -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-[#0a0f1d] min-h-screen text-slate-100 overflow-hidden select-none">
+
+  <!-- Root mount point for React app -->
+  <div id="root">
+    <div class="flex flex-col items-center justify-center min-h-screen bg-[#0a0f1d]">
+      <div class="w-10 h-10 rounded-full border-4 border-slate-700 border-t-[#00f0ff] animate-spin mb-4"></div>
+      <div class="font-mono text-xs tracking-wider text-slate-400">INITIALIZING NEUROSLEEP LAB ENVIRONMENT...</div>
+    </div>
+  </div>
+
+  <!-- Local Script Dependencies -->
+  <script src="simulation.js"></script>
+  <script src="sound.js"></script>
+  <script src="brain3d.js"></script>
+  <script src="network.js"></script>
+  
+  <!-- Inline React Code -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    function NeuroSleepDashboard() {
+      // Global States
+      const [hours, setHours] = useState(0);
+      const [isPlaying, setIsPlaying] = useState(false);
+      const [isRecoveryMode, setIsRecoveryMode] = useState(false);
+      const [recoveryProgress, setRecoveryProgress] = useState(0); // 0 to 1
+      const [isMuted, setIsMuted] = useState(true);
+      const [selectedNode, setSelectedNode] = useState(null);
+      const [simulationSpeed, setSimulationSpeed] = useState(1);
+      const [tick, setTick] = useState(0); // For real-time wave scroll animation
+      
+      // Presentation highlights
+      const [activeHighlight, setActiveHighlight] = useState('');
+
+      // Dynamic Metrics
+      const [cellular, setCellular] = useState({ atp: 100, ros: 10, sleepFactor: 5, oxidativeStress: 0 });
+      const [network, setNetwork] = useState({ clusteringCoefficient: 0.65, averagePathLength: 2.1, connectivityScore: 100, stabilityScore: 100, efficiencyScore: 100, cognitiveDecline: 0, severityIndex: 0 });
+      const [neuronSpikes, setNeuronSpikes] = useState([]);
+      
+      // AI Presentation/Narrator assistant
+      const [isDemoMode, setIsDemoMode] = useState(false);
+      const [demoStep, setDemoStep] = useState(0);
+      const [demoCaption, setDemoCaption] = useState('');
+
+      const brain3dContainerRef = useRef(null);
+      const networkContainerRef = useRef(null);
+
+      // Simple captions explaining stages in plain English
+      const STAGE_EXPLANATIONS = {
+        rested: {
+          title: "Fully Rested Brain",
+          description: "Mitochondria produce high ATP energy levels. Synapses propagate action potential signals regularly. The brain network is highly synchronized and working at 100% efficiency."
+        },
+        mild: {
+          title: "Mild Sleep Deprivation (24 Hours)",
+          description: "Mitochondrial output begins to decay, causing ATP levels to drop and ROS stress factors to build. Minor firing irregularities appear in cortical cells. Fatigue and reaction times start slowing down."
+        },
+        severe: {
+          title: "Severe Sleep Deprivation (48+ Hours)",
+          description: "Low cellular energy disrupts active ion pumps, causing chaotic and irregular neuron spikes. The connectome pathways begin to degrade, leading to connection failures and memory compromises."
+        },
+        recovery: {
+          title: "Engaging Sleep Recovery Cycle",
+          description: "Targeted resting allows mitochondria to clear ROS and restore baseline ATP. Homeostatic feedback loops repair synaptic pathways, re-establishing network synchronization."
+        }
+      };
+
+      // Autopilot presenter steps - Slowed down (14000ms duration) and formatted creatively
+      const DEMO_SCRIPT = [
+        {
+          caption: "Welcome to the showcase. We begin with a healthy, fully rested digital twin. Notice the stable blue connectome pathways, regular neuron spikes, and strong Beta brainwave activity.",
+          targetHours: 0,
+          recovery: 0,
+          highlight: "brain-view",
+          duration: 14000
+        },
+        {
+          caption: "Breaching 24 hours of sleep deprivation. Cellular metabolism begins failing. VCell simulates a significant depletion of ATP energy and a rise in reactive oxygen stress.",
+          targetHours: 24,
+          recovery: 0,
+          highlight: "vcell-engine",
+          duration: 14000
+        },
+        {
+          caption: "At 48 hours, energy deprivation halts the single-cell active ion pumps. The NEURON oscilloscope records highly unstable resting potentials and chaotic, failing action potential spikes.",
+          targetHours: 48,
+          recovery: 0,
+          highlight: "neuron-engine",
+          duration: 14000
+        },
+        {
+          caption: "At 72 hours, we observe the global connectome collapse. High sleep pressure Delta waves dominate the EEG spectrum, and Cytoscape maps physical pathways breaking apart under stress.",
+          targetHours: 72,
+          recovery: 0,
+          highlight: "eeg-engine",
+          duration: 14000
+        },
+        {
+          caption: "Initiating targeted Sleep Recovery. Mitochondria clear active cellular stress and restore ATP. Observe the synapses repairing and returning to a healthy homeostatic state.",
+          targetHours: 72,
+          recovery: 1,
+          highlight: "recovery-deck",
+          duration: 14000
+        }
+      ];
+
+      // Setup global clock for real-time EEG wave scrolling
+      useEffect(() => {
+        const anim = setInterval(() => {
+          setTick(t => t + 1);
+        }, 40);
+        return () => clearInterval(anim);
+      }, []);
+
+      // Sync simulation engines
+      useEffect(() => {
+        const recFraction = isRecoveryMode ? recoveryProgress : 0;
+        const cellStress = window.NeuroSimulation.getCellularStress(hours, recFraction);
+        const netMetrics = window.NeuroSimulation.getNetworkMetrics(hours, recFraction);
+        const spikes = window.NeuroSimulation.generateNeuronSpikes(hours, recFraction, 100, 0.2);
+
+        setCellular(cellStress);
+        setNetwork(netMetrics);
+        setNeuronSpikes(spikes);
+
+        // Sync WebGL Brain
+        if (window.NeuroBrain3D) {
+          window.NeuroBrain3D.updateVisuals(netMetrics.severityIndex);
+        }
+        
+        // Sync Cytoscape Network
+        if (window.NeuroNetwork) {
+          window.NeuroNetwork.updateNetwork(netMetrics.severityIndex);
+        }
+
+        // Sync Audio
+        if (window.NeuroSound) {
+          window.NeuroSound.updateState(netMetrics.severityIndex);
+        }
+      }, [hours, isRecoveryMode, recoveryProgress]);
+
+      // Timeline loop
+      useEffect(() => {
+        let intervalId = null;
+        if (isPlaying && !isDemoMode) {
+          intervalId = setInterval(() => {
+            if (isRecoveryMode) {
+              setRecoveryProgress(prev => {
+                if (prev >= 1) {
+                  setIsPlaying(false);
+                  return 1;
+                }
+                return prev + 0.03 * simulationSpeed;
+              });
+            } else {
+              setHours(prev => {
+                if (prev >= 72) {
+                  setIsPlaying(false);
+                  return 72;
+                }
+                return prev + 0.6 * simulationSpeed;
+              });
+            }
+          }, 100);
+        }
+        return () => clearInterval(intervalId);
+      }, [isPlaying, isRecoveryMode, simulationSpeed, isDemoMode]);
+
+      // Autopilot mode loop with Voice Narration API and neon panel highlighting
+      useEffect(() => {
+        let demoTimeout = null;
+        if (isDemoMode) {
+          const stepData = DEMO_SCRIPT[demoStep];
+          setDemoCaption(stepData.caption);
+          setActiveHighlight(stepData.highlight);
+          
+          // 1. Trigger Speech Synthesis voice (if unmuted)
+          if (window.speechSynthesis) {
+            window.speechSynthesis.cancel(); // stop previous speech
+            if (!isMuted) {
+              const utterance = new SpeechSynthesisUtterance(stepData.caption);
+              utterance.rate = 0.95; // slower, professional pace
+              
+              // Try to find a high-quality local English voice
+              const voices = window.speechSynthesis.getVoices();
+              const voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+              if (voice) {
+                utterance.voice = voice;
+              }
+              window.speechSynthesis.speak(utterance);
+            }
+          }
+
+          // 2. Adjust parameters based on timeline step
+          if (stepData.recovery > 0) {
+            setIsRecoveryMode(true);
+            setHours(72);
+            let progress = 0;
+            const recInterval = setInterval(() => {
+              progress += 0.04;
+              if (progress >= 1) {
+                setRecoveryProgress(1);
+                clearInterval(recInterval);
+              } else {
+                setRecoveryProgress(progress);
+              }
+            }, 150);
+            setTimeout(() => clearInterval(recInterval), stepData.duration);
+          } else {
+            setIsRecoveryMode(false);
+            setRecoveryProgress(0);
+            
+            const startH = hours;
+            const targetH = stepData.targetHours;
+            const diff = targetH - startH;
+            let elapsed = 0;
+            const animInterval = setInterval(() => {
+              elapsed += 100;
+              const ratio = Math.min(1, elapsed / 2000);
+              setHours(startH + diff * ratio);
+              if (ratio >= 1) clearInterval(animInterval);
+            }, 50);
+          }
+
+          if (stepData.targetHours >= 48 && stepData.recovery === 0 && window.NeuroSound) {
+            window.NeuroSound.playWarning();
+          } else if (stepData.recovery > 0 && window.NeuroSound) {
+            window.NeuroSound.playRepair();
+          }
+
+          demoTimeout = setTimeout(() => {
+            setDemoStep(prev => (prev + 1) % DEMO_SCRIPT.length);
+          }, stepData.duration);
+        } else {
+          // Reset highlights and voice when demo stops
+          setActiveHighlight('');
+          if (window.speechSynthesis) {
+            window.speechSynthesis.cancel();
+          }
+        }
+        return () => {
+          clearTimeout(demoTimeout);
+          if (window.speechSynthesis) window.speechSynthesis.cancel();
+        };
+      }, [isDemoMode, demoStep, isMuted]);
+
+      // Mount 3D Brain & Cytoscape side-by-side
+      useEffect(() => {
+        if (brain3dContainerRef.current) {
+          window.NeuroBrain3D.init(brain3dContainerRef.current);
+        }
+        if (networkContainerRef.current) {
+          window.NeuroNetwork.init(networkContainerRef.current, (node) => {
+            setSelectedNode(node);
+            if (window.NeuroSound) window.NeuroSound.playClick();
+          });
+        }
+        return () => {
+          window.NeuroBrain3D.destroy();
+          window.NeuroNetwork.destroy();
+        };
+      }, []);
+
+      const handleBtnClick = () => {
+        if (window.NeuroSound) window.NeuroSound.playClick();
+      };
+
+      const handleSoundToggle = () => {
+        if (window.NeuroSound) {
+          const muted = window.NeuroSound.toggleMute();
+          setIsMuted(muted);
+        }
+      };
+
+      // Determine clean pathology phase
+      const getActivePathology = () => {
+        if (isRecoveryMode) return STAGE_EXPLANATIONS.recovery;
+        if (hours < 18) return STAGE_EXPLANATIONS.rested;
+        if (hours < 42) return STAGE_EXPLANATIONS.mild;
+        return STAGE_EXPLANATIONS.severe;
+      };
+
+      const pathology = getActivePathology();
+
+      // EEG Brainwave path equations
+      const generateEEGWavePath = (type) => {
+        const severity = network.severityIndex / 100;
+        let points = [];
+        const width = 200;
+        const baseline = 20;
+
+        let amp = 0;
+        let freq = 0;
+        let noiseAmp = 0;
+
+        if (type === 'beta') {
+          amp = Math.max(0.5, 3.5 * (1 - severity * 0.9));
+          freq = 0.65;
+          noiseAmp = severity * 1.5;
+        } else if (type === 'alpha') {
+          amp = Math.max(0.8, 4.0 * (1 - severity * 0.8));
+          freq = 0.3;
+          noiseAmp = 0.2;
+        } else if (type === 'theta') {
+          amp = 1.0 + severity * 8.0;
+          freq = 0.12;
+          noiseAmp = 0.3;
+        } else if (type === 'delta') {
+          if (isRecoveryMode) {
+            amp = 12.0;
+            freq = 0.06;
+          } else {
+            amp = 0.5 + severity * 11.0;
+            freq = 0.06;
+          }
+          noiseAmp = 0.1;
+        }
+
+        for (let x = 0; x <= width; x += 2) {
+          const phase = tick * 0.15;
+          const noise = (Math.sin(x * 1.5 + tick * 0.8) * Math.cos(x * 0.7)) * noiseAmp;
+          const y = baseline + amp * Math.sin(x * freq + phase) + noise;
+          points.push(`${x === 0 ? 'M' : 'L'} ${x} ${y}`);
+        }
+        return points.join(' ');
+      };
+
+      return (
+        <div className="min-h-screen bg-[#070b16] text-slate-100 flex flex-col font-sans overflow-hidden selection:bg-[#00f0ff] selection:text-[#0a0f1d] relative">
+          
+          {/* Subtle Cyber Glow elements */}
+          <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vh] rounded-full bg-[#00f0ff]/5 blur-[120px] pointer-events-none"></div>
+          <div className="absolute bottom-[-20%] right-[-10%] w-[50vw] h-[50vh] rounded-full bg-[#ff0055]/5 blur-[120px] pointer-events-none"></div>
+
+          {/* TOP BAR HEADER */}
+          <header className="border-b border-slate-900 bg-slate-950/70 backdrop-blur-md px-6 py-4 flex items-center justify-between z-35">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg border border-[#00f0ff] flex items-center justify-center bg-[#00f0ff]/5">
+                <i className="lucide lucide-brain text-[#00f0ff] text-sm"></i>
+              </div>
+              <div>
+                <h1 className="text-base font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-[#00f0ff] to-sky-400 font-mono">
+                  NeuroSleep Digital Twin Platform
+                </h1>
+                <p className="text-[9px] text-slate-500 font-mono tracking-wider">COMPUTATIONAL BRAIN METABOLISM & CONNECTIVITY WORKSPACE</p>
+              </div>
+            </div>
+
+            {/* Quick status summary */}
+            <div className="hidden md:flex items-center gap-6 font-mono text-xs">
+              <div>
+                <span className="text-slate-500 block text-[8px] uppercase">Simulation Timeline</span>
+                <span className="text-slate-200 font-bold">
+                  {isRecoveryMode ? `Recovery Process: ${(recoveryProgress*100).toFixed(0)}%` : `Sleep Deprivation: ${hours.toFixed(0)} Hours`}
+                </span>
+              </div>
+              <div className="border-l border-slate-900 pl-6">
+                <span className="text-slate-500 block text-[8px] uppercase">Connection Loss</span>
+                <span className={`font-bold ${100 - network.connectivityScore > 40 ? 'text-[#ff0055] animate-pulse' : 'text-sky-400'}`}>
+                  {100 - network.connectivityScore}% Decay
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={handleSoundToggle}
+                className={`p-2 rounded-lg border text-xs font-mono flex items-center gap-1.5 transition-all ${!isMuted ? 'border-[#00f0ff] text-[#00f0ff] bg-[#00f0ff]/10 shadow-[0_0_10px_rgba(0,240,255,0.15)]' : 'border-slate-800 text-slate-400 hover:border-slate-700'}`}
+              >
+                <i className={`lucide ${!isMuted ? 'lucide-volume-2' : 'lucide-volume-x'}`}></i>
+                <span className="hidden sm:inline">{!isMuted ? 'AUDIO: ON' : 'AUDIO: OFF'}</span>
+              </button>
+              
+              <button
+                onClick={() => {
+                  handleBtnClick();
+                  setIsDemoMode(!isDemoMode);
+                  setDemoStep(0);
+                }}
+                className={`px-3 py-2 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 transition-all ${isDemoMode ? 'border-[#ff0055] text-[#ff0055] bg-[#ff0055]/10 animate-pulse' : 'border-slate-855 text-slate-300 hover:border-slate-700'}`}
+              >
+                <i className="lucide lucide-play"></i>
+                {isDemoMode ? 'STOP PRESENTATION' : 'PRESENTATION MODE'}
+              </button>
+            </div>
+          </header>
+
+          {/* PRESENTER CAPTIONS BOX WITH NEON TIME PROGRESS BAR */}
+          {isDemoMode && (
+            <div className="border-b border-[#ff0055]/30 relative z-20 bg-slate-950/90 shadow-lg">
+              <div className="px-6 py-3.5 flex items-center gap-3">
+                <span className="w-2 h-2 rounded-full bg-[#ff0055] animate-ping shrink-0"></span>
+                <span className="text-[10px] font-mono font-bold text-[#ff0055] tracking-widest shrink-0 uppercase">[Presenter Voice]:</span>
+                <p className="text-xs sm:text-sm text-slate-200 font-medium italic select-none">"{demoCaption}"</p>
+              </div>
+              {/* Animated Progress bar indicating time remaining on current slide */}
+              <div key={demoStep} className="h-0.5 bg-[#ff0055] animate-progress-shrink w-full"></div>
+            </div>
+          )}
+
+          {/* MAIN 3-COLUMN LAYOUT */}
+          <main className="flex-1 grid grid-cols-1 xl:grid-cols-12 gap-4 p-4 min-h-0 overflow-hidden">
+            
+            {/* COLUMN 1 (LEFT): CELLULAR METABOLISM & ELECTRICAL FIRING (3 cols) */}
+            <section className="xl:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1">
+              
+              {/* VCell Metabolic stress */}
+              <div id="vcell-engine" className={`border rounded-xl bg-slate-950/45 p-4 flex flex-col gap-3 transition-all duration-500 ${activeHighlight === 'vcell-engine' ? 'border-[#00f0ff] ring-2 ring-[#00f0ff]/50 shadow-[0_0_20px_rgba(0,240,255,0.3)] bg-slate-900/50 scale-[1.02]' : 'border-slate-900'} ${cellular.ros > 75 && activeHighlight !== 'vcell-engine' ? 'border-[#ff0055]/40 shadow-[0_0_12px_rgba(255,0,85,0.15)]' : ''}`}>
+                <span className="text-[10px] font-mono text-sky-400 block border-b border-slate-900 pb-2 font-bold uppercase tracking-wider">Stage 1: Cellular Metabolism (VCell)</span>
+                
+                {/* Circular gauges */}
+                <div className="grid grid-cols-2 gap-3 my-1">
+                  
+                  {/* Energy level */}
+                  <div className="flex flex-col items-center p-2.5 rounded-lg bg-slate-900/30 border border-slate-900">
+                    <span className="text-[9px] font-mono text-slate-400 mb-1.5 uppercase">Cell Energy</span>
+                    <div className="relative w-16 h-16 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle cx="32" cy="32" r="28" className="stroke-slate-800" strokeWidth="4.5" fill="transparent" />
+                        <circle cx="32" cy="32" r="28" className="stroke-[#00f0ff] transition-all duration-300" strokeWidth="4.5" fill="transparent"
+                          strokeDasharray={2 * Math.PI * 28}
+                          strokeDashoffset={2 * Math.PI * 28 * (1 - cellular.atp / 100)} />
+                      </svg>
+                      <span className="absolute text-xs font-bold font-mono">{cellular.atp.toFixed(0)}%</span>
+                    </div>
+                  </div>
+
+                  {/* Oxidative stress */}
+                  <div className="flex flex-col items-center p-2.5 rounded-lg bg-slate-900/30 border border-slate-900">
+                    <span className="text-[9px] font-mono text-slate-400 mb-1.5 uppercase">Cell Stress</span>
+                    <div className="relative w-16 h-16 flex items-center justify-center">
+                      <svg className="w-full h-full transform -rotate-90">
+                        <circle cx="32" cy="32" r="28" className="stroke-slate-800" strokeWidth="4.5" fill="transparent" />
+                        <circle cx="32" cy="32" r="28" className="stroke-[#ff0055] transition-all duration-300" strokeWidth="4.5" fill="transparent"
+                          strokeDasharray={2 * Math.PI * 28}
+                          strokeDashoffset={2 * Math.PI * 28 * (1 - cellular.ros / 100)} />
+                      </svg>
+                      <span className="absolute text-xs font-bold font-mono">{cellular.ros.toFixed(0)}%</span>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* Simplified Line chart */}
+                <div className="h-24 w-full bg-slate-950 border border-slate-900 p-2 rounded relative">
+                  <svg viewBox="0 0 100 40" className="w-full h-full overflow-visible" preserveAspectRatio="none">
+                    {/* Grid lines */}
+                    <line x1="0" y1="10" x2="100" y2="10" stroke="#1e293b" strokeWidth="0.25" />
+                    <line x1="0" y1="20" x2="100" y2="20" stroke="#1e293b" strokeWidth="0.25" />
+                    <line x1="0" y1="30" x2="100" y2="30" stroke="#1e293b" strokeWidth="0.25" />
+                    
+                    {/* Energy line */}
+                    <path
+                      d={Array.from({ length: 15 }, (_, i) => {
+                        const h = (i * 5.2);
+                        const val = 25 + 75 * Math.exp(-h / 32);
+                        const x = i * 7.14;
+                        const y = 40 - (val / 100) * 35 - 2;
+                        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                      }).join(' ')}
+                      fill="none"
+                      stroke="#00f0ff"
+                      strokeWidth="1.2"
+                    />
+
+                    {/* Stress line */}
+                    <path
+                      d={Array.from({ length: 15 }, (_, i) => {
+                        const h = (i * 5.2);
+                        const val = 100 - 90 * Math.exp(-h / 24);
+                        const x = i * 7.14;
+                        const y = 40 - (val / 100) * 35 - 2;
+                        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+                      }).join(' ')}
+                      fill="none"
+                      stroke="#ff0055"
+                      strokeWidth="1.2"
+                    />
+                  </svg>
+                  <div className="absolute top-1 left-2 text-[7px] font-mono text-slate-500">Nominal (100)</div>
+                  <div className="absolute bottom-1 left-2 text-[7px] font-mono text-slate-500">Decline (0)</div>
+                </div>
+              </div>
+
+              {/* NEURON Oscilloscope */}
+              <div id="neuron-engine" className={`border rounded-xl bg-slate-950/45 p-4 flex flex-col gap-3 transition-all duration-500 ${activeHighlight === 'neuron-engine' ? 'border-[#c084fc] ring-2 ring-[#c084fc]/50 shadow-[0_0_20px_rgba(192,132,252,0.3)] bg-slate-900/50 scale-[1.02]' : 'border-slate-900'}`}>
+                <span className="text-[10px] font-mono text-[#c084fc] block border-b border-slate-900 pb-2 font-bold uppercase tracking-wider">Stage 2: Electrical Spiking (NEURON)</span>
+                
+                <div className="h-28 w-full bg-slate-950 border border-slate-900 rounded p-2 relative flex items-center justify-center overflow-hidden">
+                  {/* Grid overlay */}
+                  <div className="absolute inset-0 grid grid-cols-4 grid-rows-3 opacity-5 pointer-events-none">
+                    {Array.from({ length: 12 }).map((_, i) => <div key={i} className="border border-sky-500"></div>)}
+                  </div>
+                  
+                  {/* Waves */}
+                  <svg viewBox="0 0 200 100" className="w-full h-full overflow-visible z-10" preserveAspectRatio="none">
+                    <path
+                      d={neuronSpikes.map((pt, idx) => {
+                        const x = (pt.time / 100) * 200;
+                        const y = 90 - ((pt.potential + 85) / 130) * 80;
+                        return `${idx === 0 ? 'M' : 'L'} ${x} ${y}`;
+                      }).join(' ')}
+                      fill="none"
+                      stroke="#c084fc"
+                      strokeWidth="1.5"
+                    />
+                  </svg>
+                  <div className="absolute top-1.5 right-2 text-[7px] font-mono text-[#c084fc] bg-slate-950 px-1 border border-slate-900 rounded">Vm Active Trace</div>
+                </div>
+                <div className="text-[9.5px] font-mono text-slate-400 leading-normal bg-slate-900/20 p-2 border border-slate-900 rounded">
+                  {hours > 36 
+                    ? "⚠️ Electrical signals are chaotic and unstable due to low cellular energy." 
+                    : "✓ Firing is rhythmic, consistent and healthy."}
+                </div>
+              </div>
+
+            </section>
+
+            {/* COLUMN 2 (CENTER): DOUBLE DIGITAL TWIN DISPLAY (THREE.JS + CYTOSCAPE) (6 cols) */}
+            <section className="xl:col-span-6 flex flex-col gap-4 overflow-hidden">
+              
+              {/* Dual Visual Panel */}
+              <div id="brain-view" className={`flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 border bg-slate-950/30 rounded-2xl p-4 overflow-hidden relative transition-all duration-500 ${activeHighlight === 'brain-view' ? 'border-[#38bdf8] ring-2 ring-[#38bdf8]/50 shadow-[0_0_20px_rgba(56,189,248,0.2)] scale-[1.01]' : 'border-slate-900'}`}>
+                
+                {/* 3D Brain */}
+                <div className="flex flex-col border border-slate-900 bg-slate-950/70 rounded-xl p-3 h-full relative">
+                  <span className="text-[10px] font-mono text-sky-400 block mb-2 border-b border-slate-900 pb-2 font-bold uppercase tracking-wider">3D Visual Brain Twin</span>
+                  <div ref={brain3dContainerRef} className="flex-1 w-full rounded-lg bg-[#070a14] overflow-hidden" />
+                </div>
+
+                {/* Cytoscape Network */}
+                <div className="flex flex-col border border-slate-900 bg-slate-950/70 rounded-xl p-3 h-full relative">
+                  <span className="text-[10px] font-mono text-pink-400 block mb-2 border-b border-slate-900 pb-2 font-bold uppercase tracking-wider">Stage 3: Connectome Map (Cytoscape)</span>
+                  <div ref={networkContainerRef} className="flex-1 w-full rounded-lg bg-[#070a14] overflow-hidden" />
+                </div>
+
+                {/* Probe HUD overlay */}
+                {selectedNode && (
+                  <div className="absolute bottom-6 left-6 right-6 bg-slate-950/90 border border-slate-800 p-3 rounded-lg flex flex-col gap-1 z-20 font-mono text-[10px] shadow-xl max-w-sm animate-fade-in">
+                    <div className="flex justify-between items-center border-b border-slate-900 pb-1 mb-1">
+                      <strong className="text-sky-400 uppercase tracking-wider">{selectedNode.label}</strong>
+                      <button onClick={() => setSelectedNode(null)} className="text-slate-500 hover:text-slate-300">✕</button>
+                    </div>
+                    <span className="text-slate-300 leading-normal">{selectedNode.desc}</span>
+                    <span className="text-yellow-500 mt-1">Stress Susceptibility: {selectedNode.vulnerability}%</span>
+                  </div>
+                )}
+
+              </div>
+
+              {/* TIMELINE DECK CONTROLLER */}
+              <div id="recovery-deck" className={`border rounded-2xl bg-slate-950/50 p-4 flex flex-col gap-3 transition-all duration-500 ${activeHighlight === 'recovery-deck' ? 'border-[#10b981] ring-2 ring-[#10b981]/50 shadow-[0_0_20px_rgba(16,185,129,0.3)] bg-slate-900/50' : 'border-slate-900'}`}>
+                <div className="flex justify-between items-center font-mono text-xs">
+                  <span className="text-slate-400">CHRONO-SIMULATOR SLIDER</span>
+                  <strong className="text-yellow-400">{hours.toFixed(0)} HOURS DEPRIVED</strong>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <input
+                    type="range"
+                    min="0"
+                    max="72"
+                    value={hours}
+                    disabled={isDemoMode || isRecoveryMode}
+                    onChange={(e) => setHours(parseFloat(e.target.value))}
+                    className="flex-1 accent-[#00f0ff] bg-slate-850 rounded-lg cursor-pointer h-1.5"
+                  />
+                  
+                  {/* Action buttons */}
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => { handleBtnClick(); setIsPlaying(!isPlaying); }}
+                      className={`py-1.5 px-3 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 ${isPlaying ? 'bg-[#00f0ff]/10 border-[#00f0ff] text-[#00f0ff]' : 'border-slate-800 hover:border-slate-700'}`}
+                      disabled={isDemoMode}
+                    >
+                      <i className={`lucide ${isPlaying ? 'lucide-pause' : 'lucide-play'}`}></i>
+                      {isPlaying ? 'PAUSE' : 'RUN'}
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        handleBtnClick();
+                        if (isRecoveryMode) {
+                          setIsRecoveryMode(false);
+                          setRecoveryProgress(0);
+                          setHours(0);
+                        } else {
+                          setIsRecoveryMode(true);
+                          setRecoveryProgress(0);
+                          setIsPlaying(true);
+                        }
+                      }}
+                      className={`py-1.5 px-3 rounded-lg border text-xs font-mono font-bold flex items-center gap-1.5 ${isRecoveryMode ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500' : 'border-slate-800 hover:border-emerald-700'}`}
+                      disabled={isDemoMode}
+                    >
+                      <i className="lucide lucide-sunset"></i>
+                      {isRecoveryMode ? 'RESET' : 'SLEEP'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+            </section>
+
+            {/* COLUMN 3 (RIGHT): PATHOLOGY INSIGHTS & EYE-CATCHING EEG BRAINWAVES (3 cols) */}
+            <section className="xl:col-span-3 flex flex-col gap-4 overflow-y-auto pl-1">
+              
+              {/* EYE-CATCHER FEATURE: REAL-TIME EEG SPECTRAL BAND WAVE VISUALIZER */}
+              <div id="eeg-engine" className={`border rounded-xl bg-slate-950/45 p-4 flex flex-col gap-3 transition-all duration-500 ${activeHighlight === 'eeg-engine' ? 'border-[#00f0ff] ring-2 ring-[#00f0ff]/50 shadow-[0_0_20px_rgba(0,240,255,0.3)] bg-slate-900/50 scale-[1.02]' : 'border-slate-900'}`}>
+                <div className="flex justify-between items-center border-b border-slate-900 pb-2">
+                  <span className="text-[10px] font-mono text-[#00f0ff] font-bold uppercase tracking-wider">EEG Spectral Coherence Sweep</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                </div>
+                
+                {/* 4 Scrolling wave channels */}
+                <div className="flex flex-col gap-3 font-mono text-[9px]">
+                  
+                  {/* Beta wave */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between text-slate-400">
+                      <span>BETA (Focus / Attention)</span>
+                      <span className={hours > 36 ? 'text-red-500' : 'text-cyan-400'}>{hours > 36 ? 'Collapsed' : 'Optimal'}</span>
+                    </div>
+                    <div className="h-10 w-full bg-slate-950 border border-slate-900 rounded overflow-hidden relative">
+                      <svg className="w-full h-full overflow-visible">
+                        <path d={generateEEGWavePath('beta')} fill="none" stroke="#00f0ff" strokeWidth="1.2" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Alpha wave */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between text-slate-400">
+                      <span>ALPHA (Active Awake)</span>
+                      <span>{hours > 48 ? 'Suppressed' : 'Synchronous'}</span>
+                    </div>
+                    <div className="h-10 w-full bg-slate-950 border border-slate-900 rounded overflow-hidden relative">
+                      <svg className="w-full h-full overflow-visible">
+                        <path d={generateEEGWavePath('alpha')} fill="none" stroke="#38bdf8" strokeWidth="1.2" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Theta wave */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between text-slate-400">
+                      <span>THETA (Drowsiness / Fatigue)</span>
+                      <span className={hours > 24 ? 'text-amber-500' : 'text-slate-500'}>{hours > 24 ? 'Elevated' : 'Dormant'}</span>
+                    </div>
+                    <div className="h-10 w-full bg-slate-950 border border-slate-900 rounded overflow-hidden relative">
+                      <svg className="w-full h-full overflow-visible">
+                        <path d={generateEEGWavePath('theta')} fill="none" stroke="#a855f7" strokeWidth="1.2" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Delta wave */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex justify-between text-slate-400">
+                      <span>DELTA (Deep restorative sleep pressure)</span>
+                      <span className={isRecoveryMode ? 'text-emerald-400 font-bold' : hours > 48 ? 'text-red-500 font-bold animate-pulse' : 'text-slate-550'}>
+                        {isRecoveryMode ? 'Active Recovery' : hours > 48 ? 'Sleep Pressure Triggered' : 'Low'}
+                      </span>
+                    </div>
+                    <div className="h-10 w-full bg-slate-950 border border-slate-900 rounded overflow-hidden relative">
+                      <svg className="w-full h-full overflow-visible">
+                        <path d={generateEEGWavePath('delta')} fill="none" stroke="#ff0055" strokeWidth="1.2" />
+                      </svg>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Pathology explanation card */}
+              <div className="border border-slate-900 rounded-xl bg-slate-950/45 p-4 flex flex-col gap-3">
+                <span className="text-[10px] font-mono text-emerald-400 block border-b border-slate-900 pb-2 font-bold uppercase tracking-wider">Active Brain Diagnostics</span>
+                
+                <div className="flex flex-col gap-2">
+                  <h4 className="font-mono font-bold text-[#00f0ff] text-xs uppercase tracking-wide">{pathology.title}</h4>
+                  <p className="text-xs text-slate-350 leading-relaxed">{pathology.description}</p>
+                </div>
+              </div>
+
+              {/* Cognitive compromise metric */}
+              <div className="border border-slate-900 rounded-xl bg-slate-950/45 p-4 flex flex-col gap-4 items-center justify-center text-center">
+                <span className="text-[10px] font-mono text-[#ff0055] block border-b border-slate-900 pb-2 w-full font-bold uppercase tracking-wider text-left">Brain Compromise Index</span>
+                
+                <div className="relative w-28 h-28 flex items-center justify-center my-1">
+                  <svg className="w-full h-full transform -rotate-90">
+                    <circle cx="56" cy="56" r="48" className="stroke-slate-900" strokeWidth="7" fill="transparent" />
+                    <circle cx="56" cy="56" r="48" className="stroke-[#ff0055] transition-all duration-300" strokeWidth="7" fill="transparent"
+                      strokeDasharray={2 * Math.PI * 48}
+                      strokeDashoffset={2 * Math.PI * 48 * (1 - network.cognitiveDecline / 100)} />
+                  </svg>
+                  <div className="absolute flex flex-col items-center">
+                    <span className="text-xl font-bold font-mono text-slate-100">{network.cognitiveDecline}%</span>
+                    <span className="text-[8px] text-slate-500 uppercase tracking-widest font-mono mt-0.5">COMPROMISE</span>
+                  </div>
+                </div>
+              </div>
+
+            </section>
+
+          </main>
+
+          {/* SYSTEM FOOTER */}
+          <footer className="border-t border-slate-950 bg-slate-950 px-6 py-3 flex items-center justify-between text-[9px] font-mono text-slate-600 z-20">
+            <span>© 2026 NEUROSLEEP DIGITAL TWIN INTERFACE</span>
+            <span>VCELL • NEURON • CYTOSCAPE SYSTEM INTEGRATION</span>
+          </footer>
+
+        </div>
+      );
+    }
+  </script>
+  
+  <!-- Mount React App -->
+  <script type="text/babel">
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<NeuroSleepDashboard />);
+    
+    // Automatically parse Lucide icon elements dynamically
+    setInterval(() => {
+      if (window.lucide) {
+        window.lucide.createIcons();
+      }
+    }, 300);
+  </script>
+
+</body>
+</html>
