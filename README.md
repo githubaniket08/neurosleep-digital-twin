@@ -18,17 +18,6 @@ Sleep deprivation affects cellular energy metabolism, oxidative stress, neuronal
   <img src="assets/pipeline_diagram.png" alt="Pipeline: sleep deprivation input through VCell metabolic simulation, dataset generation, ML classification and neural spiking model, Cytoscape connectivity, to the digital twin dashboard" width="950">
 </p>
 
-## 📈 Simulation results
-
-ATP and ROS dynamics per condition, exported directly from VCell (`Sleep_Deprivation_Model`, CVODE/IDA solver, t = 0–100).
-
-<p align="center">
-  <img src="assets/ATP_Healthy.png" width="220"><img src="assets/ATP_Mild.png" width="220"><img src="assets/ATP_Recovery.png" width="220"><img src="assets/ATP_Severe.png" width="220">
-</p>
-<p align="center">
-  <img src="assets/ROS_Healthy.png" width="220"><img src="assets/ROS_Mild.png" width="220"><img src="assets/ROS_Recovery.png" width="220"><img src="assets/ROS_Severe.png" width="220">
-</p>
-
 ## 🕸️ Connectivity progression
 
 Illustrative reconstruction of the Cytoscape connectome across the four states — network density visibly drops from Healthy through Severe, consistent with the saved Cytoscape session's progression.
