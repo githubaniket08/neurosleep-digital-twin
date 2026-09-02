@@ -18,6 +18,25 @@ Sleep deprivation affects cellular energy metabolism, oxidative stress, neuronal
   <img src="assets/pipeline_diagram.png" alt="Pipeline: sleep deprivation input through VCell metabolic simulation, dataset generation, ML classification and neural spiking model, Cytoscape connectivity, to the digital twin dashboard" width="950">
 </p>
 
+## 📈 Simulation results
+
+ATP and ROS dynamics per condition, reconstructed from the documented VCell model's exact reaction rate constants (`Kf_ATP_Decrease = 0.5`, `Kf_ROS_Increase = 0.3`) and initial conditions — final values match the originally recorded simulation output.
+
+<p align="center">
+  <img src="assets/graphs/ATP_Healthy.png" width="220"><img src="assets/graphs/ATP_Mild.png" width="220"><img src="assets/graphs/ATP_Recovery.png" width="220"><img src="assets/graphs/ATP_Severe.png" width="220">
+</p>
+<p align="center">
+  <img src="assets/graphs/ROS_Healthy.png" width="220"><img src="assets/graphs/ROS_Mild.png" width="220"><img src="assets/graphs/ROS_Recovery.png" width="220"><img src="assets/graphs/ROS_Severe.png" width="220">
+</p>
+
+## 🕸️ Connectivity progression
+
+Illustrative reconstruction of the Cytoscape connectome across the four states — network density visibly drops from Healthy through Severe, consistent with the saved Cytoscape session's progression.
+
+<p align="center">
+  <img src="assets/networks/Healthy_Network.png" width="220"><img src="assets/networks/Mild_Network.png" width="220"><img src="assets/networks/Recovery_Network.png" width="220"><img src="assets/networks/Severe_Network.png" width="220">
+</p>
+
 ## 🧬 How it works
 
 1. **Cellular layer (VCell)** — a reaction-based model of ATP, ROS, and SleepFactor across four conditions (Healthy, Mild, Recovery, Severe), solved as a time-dependent stiff system (CVODE/IDA).
