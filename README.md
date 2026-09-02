@@ -20,7 +20,7 @@ Sleep deprivation affects cellular energy metabolism, oxidative stress, neuronal
 
 ## 📈 Simulation results
 
-ATP and ROS dynamics per condition, reconstructed from the documented VCell model's exact reaction rate constants (`Kf_ATP_Decrease = 0.5`, `Kf_ROS_Increase = 0.3`) and initial conditions — final values match the originally recorded simulation output.
+ATP and ROS dynamics per condition, exported directly from VCell (`Sleep_Deprivation_Model`, CVODE/IDA solver, t = 0–100).
 
 <p align="center">
   <img src="assets/ATP_Healthy.png" width="220"><img src="assets/ATP_Mild.png" width="220"><img src="assets/ATP_Recovery.png" width="220"><img src="assets/ATP_Severe.png" width="220">
